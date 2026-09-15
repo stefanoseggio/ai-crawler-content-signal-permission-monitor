@@ -11,10 +11,10 @@
 ## Run it
 
 <p align="center">
-  <a href="https://console.apify.com/actors/eWDx4XY54R5GXysFi"><img alt="Run on Apify Console" src="https://img.shields.io/badge/Run%20on-Apify%20Console-00C0B5?logo=apify&logoColor=white&style=for-the-badge"></a>
+  <a href="https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor"><img alt="Run on Apify Store" src="https://img.shields.io/badge/Run%20on-Apify%20Store-00C0B5?logo=apify&logoColor=white&style=for-the-badge"></a>
 </p>
 
-This Actor (`eWDx4XY54R5GXysFi`) is currently private in Apify Console while it finishes its verification pass. Once it's published to the Apify Store, it becomes publicly runnable at [apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor](https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor) with no direct Console link required.
+Live and public at [apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor](https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor). Owner console: [console.apify.com/actors/eWDx4XY54R5GXysFi](https://console.apify.com/actors/eWDx4XY54R5GXysFi).
 
 > This repository is a documentation and integration wrapper around that Actor - the MIT license below covers this repo's own README, snippets, and docs, not the Actor's proprietary TypeScript source, which stays closed and hosted on Apify.
 
