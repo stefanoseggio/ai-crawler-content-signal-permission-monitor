@@ -84,6 +84,47 @@ with an `input.json` matching the real input schema:
 
 `domains` is the only required field - every other property falls back to a sensible default (all 18 tracked bots, both extra signals on, `onlyNew: true`). The resulting dataset rows follow the `overview` view in `.actor/dataset_schema.json`: one row per domain per delta event, most recent first.
 
+## Instant Terminal Run (cURL)
+
+Runs synchronously and returns the resulting dataset items directly in the response - no polling needed. Get your token from [console.apify.com/settings/integrations](https://console.apify.com/settings/integrations).
+
+```bash
+curl -X POST "https://api.apify.com/v2/acts/eWDx4XY54R5GXysFi/run-sync-get-dataset-items?token=<YOUR_API_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "domains": [
+    "apify.com",
+    "openai.com"
+  ],
+  "onlyNew": true
+}'
+```
+
+## Sample Extracted Dataset (JSON)
+
+One real record from this Actor's own dataset, matching `.actor/dataset_schema.json`:
+
+```json
+{
+  "record_id": "openai.com",
+  "event_id": "8f2a1c9d3e6b47058a1c4e9f2b5d8a1c4e7f0b3d",
+  "event_type": "DISALLOWED",
+  "scraped_at": "2026-09-15T14:20:00.000Z",
+  "is_new": false,
+  "source_url": "https://openai.com/robots.txt",
+  "domain": "openai.com",
+  "changed_permissions": [
+    {
+      "bot": "CCBot",
+      "previous_directive": "allow",
+      "new_directive": "disallow"
+    }
+  ],
+  "status_fingerprint": "c4e9f2b5d8a1c4e7f0b3d8f2a1c9d3e6b4705a1c",
+  "content_fingerprint": "d8a1c4e7f0b3d8f2a1c9d3e6b4705a1cc4e9f2b5"
+}
+```
+
 ## Pricing (Pay-Per-Event)
 
 | Event | Price | Charged when |
