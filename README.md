@@ -3,16 +3,16 @@
 
 <p align="center">
   <a href="https://apify.com"><img alt="Built for Apify" src="https://img.shields.io/badge/Built%20for-Apify-00C0B5?logo=apify&logoColor=white"></a>
-  <a href="#pricing-pay-per-event"><img alt="Pay-Per-Event" src="https://img.shields.io/badge/Pay--Per--Event-from%20%240.006-blue"></a>
+  <a href="#cost--byok-disclosure"><img alt="Pay-Per-Event" src="https://img.shields.io/badge/Pay--Per--Event-from%20%240.006-blue"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
-## Run it
-
 <p align="center">
   <a href="https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor"><img alt="Run on Apify Store" src="https://img.shields.io/badge/Run%20on-Apify%20Store-00C0B5?logo=apify&logoColor=white&style=for-the-badge"></a>
 </p>
+
+Monitors any domain, globally, for changes to its robots.txt AI-crawler directives, Cloudflare Content-Signal header, and llms.txt/llms-full.txt files, on whichever schedule you configure via Apify's own Scheduler - there is no fixed built-in cadence.
 
 Live and public at [apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor](https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor). Owner console: [console.apify.com/actors/eWDx4XY54R5GXysFi](https://console.apify.com/actors/eWDx4XY54R5GXysFi).
 
@@ -61,32 +61,26 @@ State lives as one Key-Value Store record per domain, keyed under the run's `del
 | Independent schedule state | `deltaStateName` namespaces baselines per schedule (e.g. `own-sites` vs. `competitor-watchlist`) so they never cross-contaminate. |
 | Run-size and reliability controls | `maxDomainsPerRun`, `concurrency`, `requestTimeoutSecs`, and `maxRetries` (exponential backoff with jitter, capped at 15s) bound cost and wall-clock time on a large watchlist. |
 
-## Quick start
+## Cost & BYOK Disclosure
 
-Get an API token from [console.apify.com/settings/integrations](https://console.apify.com/settings/integrations) (or run `apify auth token` if you use the Apify CLI), then set it as `APIFY_TOKEN` and run:
+This Actor bills on Apify's [Pay-Per-Event](https://apify.com/pricing) model.
 
-```bash
-apify call eWDx4XY54R5GXysFi --input-file=input.json
-```
+| Event name | What triggers it | Price |
+|---|---|---|
+| `result` (`ALLOWED` / `DISALLOWED`) | A tracked AI crawler's `robots.txt` directive changed since the last check. `DISALLOWED` wins whenever any bot flipped to a block in the same run. | $0.015 per directive flip |
+| `result-summary` (`CHANGED`) | A Content-Signal category or `llms.txt`/`llms-full.txt` changed, with no bot-directive flip. | $0.006 per change |
+| `BASELINE_SNAPSHOT` | A domain's first-ever check under its `deltaStateName` - always delivered, regardless of other settings. | Free |
+| `NO_CHANGE` | Only delivered when `onlyNew: false`; the domain's status and content fingerprints (SHA-256, computed in `deltaEngine.ts`) both matched the previous run. | Free |
 
-with an `input.json` matching the real input schema:
+Unchanged domains are never billed: when a domain's `status_fingerprint`/`content_fingerprint` pair matches what's stored from the last check, no `result` or `result-summary` event fires - it is suppressed before delivery, not charged and refunded afterward. Every domain's first check is always a free `BASELINE_SNAPSHOT`, and a run that finds nothing new costs nothing at all.
 
-```json
-{
-  "domains": ["cloudflare.com", "openai.com"],
-  "trackedBots": ["GPTBot", "ClaudeBot", "Google-Extended", "PerplexityBot"],
-  "checkContentSignals": true,
-  "checkLlmsTxt": true,
-  "onlyNew": true,
-  "deltaStateName": "own-sites"
-}
-```
+**BYOK: none required.** This is pure Pay-Per-Event, not BYOK - there's no external API key to bring, since `robots.txt`, `Content-Signal` headers, and `llms.txt` are all public, unauthenticated resources this Actor fetches directly.
 
-`domains` is the only required field - every other property falls back to a sensible default (all 18 tracked bots, both extra signals on, `onlyNew: true`). The resulting dataset rows follow the `overview` view in `.actor/dataset_schema.json`: one row per domain per delta event, most recent first.
+## Quickstart
 
-## Instant Terminal Run (cURL)
+Get an API token from [console.apify.com/settings/integrations](https://console.apify.com/settings/integrations) (or run `apify auth token` if you use the Apify CLI).
 
-Runs synchronously and returns the resulting dataset items directly in the response - no polling needed. Get your token from [console.apify.com/settings/integrations](https://console.apify.com/settings/integrations).
+### cURL (synchronous, no polling)
 
 ```bash
 curl -X POST "https://api.apify.com/v2/acts/eWDx4XY54R5GXysFi/run-sync-get-dataset-items?token=<YOUR_API_TOKEN>" \
@@ -100,9 +94,82 @@ curl -X POST "https://api.apify.com/v2/acts/eWDx4XY54R5GXysFi/run-sync-get-datas
 }'
 ```
 
-## Sample Extracted Dataset (JSON)
+### Python (`apify-client`)
 
-One real record from this Actor's own dataset, matching `.actor/dataset_schema.json`:
+```python
+# pip install apify-client
+import os
+from apify_client import ApifyClient
+
+# Reads your Apify API token from an environment variable - never hardcode it.
+client = ApifyClient(os.environ["APIFY_API_TOKEN"])
+
+run_input = {
+    "domains": ["cloudflare.com", "openai.com"],
+    "trackedBots": ["GPTBot", "ClaudeBot", "Google-Extended", "PerplexityBot"],
+    "checkContentSignals": True,
+    "checkLlmsTxt": True,
+    "onlyNew": True,
+    "deltaStateName": "own-sites",
+}
+
+run = client.actor("stefano_seggio/ai-crawler-content-signal-permission-monitor").call(run_input=run_input)
+print(f"Run finished with status: {run['status']}")
+
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(f"{item['domain']}: {item['event_type']} (fetched {item['scraped_at']})")
+```
+
+### Node.js (`apify-client`)
+
+```javascript
+// npm install apify-client
+import { ApifyClient } from 'apify-client';
+
+const client = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
+
+const run = await client.actor('stefano_seggio/ai-crawler-content-signal-permission-monitor').call({
+    domains: ['cloudflare.com', 'openai.com'],
+    trackedBots: ['GPTBot', 'ClaudeBot', 'Google-Extended', 'PerplexityBot'],
+    checkContentSignals: true,
+    checkLlmsTxt: true,
+    onlyNew: true,
+    deltaStateName: 'own-sites',
+});
+
+console.log(`Run finished with status: ${run.status}`);
+
+const { items } = await client.dataset(run.defaultDatasetId).listItems();
+for (const item of items) {
+    console.log(`${item.domain}: ${item.event_type} (fetched ${item.scraped_at})`);
+}
+```
+
+Runnable copies of the Python and Node.js examples above (calling the Actor by its internal ID rather than its slug) live in `examples/run_monitor.py` and `examples/run-monitor.js` in this repo.
+
+`domains` is the only required field - every other property falls back to a sensible default (all 18 tracked bots, both extra signals on, `onlyNew: true`).
+
+## Input & Output Schema
+
+This is a documentation/integration wrapper repo with no local `.actor/input_schema.json` - the field list below is the real, complete input surface as documented and exercised in this README's own examples above.
+
+### Input
+
+| Field | Required | Default | Description |
+|---|---|---|---|
+| `domains` | Yes | - | Any mix of your own sites and competitor/vendor hostnames; each gets fully independent delta state, so one watchlist can cover both. |
+| `trackedBots` | No | all 18 tracked tokens | Which AI-crawler user-agent tokens to check in `robots.txt` (e.g. `GPTBot`, `ClaudeBot`, `Google-Extended`, `PerplexityBot`) - narrow to one vendor family or add a new token. |
+| `checkContentSignals` | No | `true` | Extracts and tracks the `search`/`ai-input`/`ai-train` categories from a `Content-Signal:` line in `robots.txt` (IETF draft `draft-romm-aipref-contentsignals`). |
+| `checkLlmsTxt` | No | `true` | Fetches `/llms.txt` and `/llms-full.txt` and reports an added, removed, or edited file as a `CHANGED` event, keyed on a SHA-256 content hash. |
+| `onlyNew` | No | `true` | Suppresses the free `NO_CHANGE` row on repeat runs so your dataset only fills with actual deltas. |
+| `deltaStateName` | No | - | Namespaces baselines per schedule (e.g. `own-sites` vs. `competitor-watchlist`) so they never cross-contaminate. |
+| `maxDomainsPerRun`, `concurrency`, `requestTimeoutSecs`, `maxRetries` | No | - | Bound cost and wall-clock time on a large watchlist; retries use exponential backoff with jitter, capped at 15s. |
+
+### Output
+
+One row per domain per delta event, most recent first, following the `overview` view in `.actor/dataset_schema.json`.
+
+#### Sample Extracted Dataset (JSON)
 
 ```json
 {
@@ -125,16 +192,20 @@ One real record from this Actor's own dataset, matching `.actor/dataset_schema.j
 }
 ```
 
-## Pricing (Pay-Per-Event)
+#### Field reference
 
-| Event | Price | Charged when |
-|---|---|---|
-| `BASELINE_SNAPSHOT` | Free | A domain's first-ever check under its `deltaStateName` - always delivered, regardless of other settings. |
-| `ALLOWED` / `DISALLOWED` (`result`) | $0.015 | A tracked AI crawler's `robots.txt` directive changed since the last check. `DISALLOWED` wins whenever any bot flipped to a block in the same run. |
-| `CHANGED` (`result-summary`) | $0.006 | A Content-Signal category or `llms.txt`/`llms-full.txt` changed, with no bot-directive flip. |
-| `NO_CHANGE` | Free | Only delivered when `onlyNew: false`; never charged. |
-
-This is pure Pay-Per-Event (PPE), not BYOK - there's no external API key to bring, since `robots.txt`, `Content-Signal` headers, and `llms.txt` are all public, unauthenticated resources this Actor fetches directly. Every domain's first check is always a free `BASELINE_SNAPSHOT`, and a run with nothing to report costs nothing either - you only pay when this Actor actually detects a permission or content-signal change, never for the audit itself or for confirming that nothing moved.
+| Field | Description |
+|---|---|
+| `record_id` | The domain this record is about (also used as the delta-state key). |
+| `event_id` | Stable id for this specific delta event. |
+| `event_type` | `BASELINE_SNAPSHOT`, `ALLOWED`, `DISALLOWED`, `CHANGED`, or `NO_CHANGE`. |
+| `scraped_at` | ISO-8601 timestamp of this run. |
+| `is_new` | `true` only on this domain's first-ever check (`BASELINE_SNAPSHOT`). |
+| `source_url` | The exact `robots.txt` (or `llms.txt`) URL fetched for this record. |
+| `domain` | The watched hostname. |
+| `changed_permissions` | Array of `{ bot, previous_directive, new_directive }` objects - one entry per AI-crawler token whose directive flipped this run. Present on `ALLOWED`/`DISALLOWED` events. |
+| `status_fingerprint` | SHA-256 hash over the domain's bot-directive state, compared run-over-run to detect `ALLOWED`/`DISALLOWED`. |
+| `content_fingerprint` | SHA-256 hash over Content-Signal + llms.txt state, compared run-over-run to detect `CHANGED`. |
 
 ## Why not just scrape it yourself
 
@@ -143,9 +214,11 @@ This is pure Pay-Per-Event (PPE), not BYOK - there's no external API key to brin
 - **Retry, backoff, and RFC 9309 parsing already solved.** `fetchWithRetry` (Got) already retries 429/5xx responses with exponential backoff and jitter, and `robotsParser.ts` already implements RFC 9309 most-specific-match group semantics plus Content-Signal extraction - logic that's easy to get subtly wrong writing it yourself.
 - **Delta detection, not a one-shot audit.** A plain `curl domain.com/robots.txt` or a one-off checker script tells you what a domain's permissions are *right now*; it can't tell you whether that's different from last week, because it holds no state between checks. This Actor's entire value is the persisted, cross-run comparison.
 
-## Code snippets
+## Contributing & Local Setup
 
-Minimal Node.js and Python examples calling this Actor via `apify-client` are included in this repository under [`examples/`](examples) - both authenticate from an `APIFY_API_TOKEN` environment variable, run a two-domain watchlist, wait for the run, and print each resulting `domain: event_type` pair from the dataset.
+As disclosed above, this repository is a documentation and integration wrapper - the Actor's real fetch/parsing/delta-engine TypeScript source (`robotsParser.ts`, `deltaEngine.ts`, `main.ts`) is proprietary and runs privately on Apify's platform, not checked into this repository. There is no `src/` here to clone and hack on.
+
+That means useful contributions here are: improving this README, fixing or extending the Node.js/Python examples in [`examples/`](examples), or reporting a documentation error via a GitHub issue or PR on this repo. To report a bug in the Actor's actual behavior, request a new tracked bot token, or ask a product question, use the Apify Store's own Issues tab on the [Store listing](https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor) - that's where the Actor's real maintainer (also the author of this repo) triages requests against the live source.
 
 ## About Delta Registry
 
