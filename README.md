@@ -67,6 +67,7 @@ This Actor bills on Apify's [Pay-Per-Event](https://apify.com/pricing) model.
 
 | Event name | What triggers it | Price |
 |---|---|---|
+| `apify-actor-start` | Platform infrastructure charge for starting the run, scaled by memory (one event per GB, minimum one). Standard on every Apify Actor, independent of this Actor's own delta logic. | $0.00005 per run (at this Actor's 256 MB default) |
 | `result` (`ALLOWED` / `DISALLOWED`) | A tracked AI crawler's `robots.txt` directive changed since the last check. `DISALLOWED` wins whenever any bot flipped to a block in the same run. | $0.015 per directive flip |
 | `result-summary` (`CHANGED`) | A Content-Signal category or `llms.txt`/`llms-full.txt` changed, with no bot-directive flip. | $0.006 per change |
 | `BASELINE_SNAPSHOT` | A domain's first-ever check under its `deltaStateName` - always delivered, regardless of other settings. | Free |
@@ -226,7 +227,7 @@ This is a documentation/integration wrapper repo with no local `.actor/input_sch
 
 ### Output
 
-One row per domain per delta event, most recent first, following the `overview` view in `.actor/dataset_schema.json`.
+One row per domain per delta event, most recent first, following the `overview` view in the live Actor's own `.actor/dataset_schema.json` - like `input_schema.json` above, that file lives with the Actor's closed-source implementation on Apify, not in this repo.
 
 #### Sample Extracted Dataset (JSON)
 
