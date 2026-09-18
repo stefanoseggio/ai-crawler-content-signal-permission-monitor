@@ -1,0 +1,65 @@
+name: Bug Report
+description: Report a documentation/example error in this repo, or a behavior bug in the live Actor
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is a documentation/integration wrapper - it holds no source code for the
+        Actor itself. Start by telling us which kind of bug this is, since the two are fixed in
+        completely different places.
+
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: What kind of bug is this?
+      options:
+        - Documentation or example error (wrong field name, stale pricing, broken link, outdated examples/ snippet)
+        - Actual data/behavior bug in the live Actor (wrong output, crash, wrong classification)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **If you selected "Actual data/behavior bug in the live Actor":** this repository cannot fix
+        that - the Actor's real implementation is closed-source and runs on Apify, not here. Please
+        also file it on the [Apify Store's Issues tab](https://apify.com/stefano_seggio/ai-crawler-content-signal-permission-monitor) so it reaches the code that
+        can actually be changed. You're welcome to still describe it below for documentation
+        purposes, but expect it to be routed there.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear, specific description of the error - quote the exact doc text or example line if applicable.
+      placeholder: e.g. "README's Output Schema section lists a `status` field but a real run returns `statusCode`"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Where in this repo (or which live run)?
+      description: File and section, or the Apify Run ID if this is about actual Actor behavior. Never paste your API token here.
+      placeholder: e.g. "README.md, Input & Output Schema section" or "Run ID VHQ3K1gJMYTnjPkEK"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirmed this against the live Actor's real current behavior (Console run or Quickstart snippet), not just what the docs say
+          required: true
+        - label: I did not include my Apify API token, or any other secret, anywhere in this report
+          required: true

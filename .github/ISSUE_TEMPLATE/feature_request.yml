@@ -1,0 +1,49 @@
+name: Feature Request
+description: Propose new documentation for an existing filter/output field, or a better example
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository only holds documentation and examples - it can't add a new input filter or
+        output field to the Actor itself (that requires a source-code change on Apify's side). Use
+        this template for things this repo *can* actually do: document something the Actor already
+        supports but this repo doesn't describe yet, or add/improve an example.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Document an existing filter/input field not yet covered here
+        - Document an existing output field not yet covered here
+        - New or improved examples/ snippet
+        - Other documentation improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing or unclear?
+      description: Describe the real use case this would unblock, not just the documentation gap itself.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed documentation or example
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirmed this field/behavior already exists on the live Actor (Console run or Quickstart snippet) rather than requesting new Actor functionality
+          required: true
+        - label: If this is a genuinely new Actor capability request (not just missing docs), I understand it belongs on the Store's Issues tab, not here
+          required: false
