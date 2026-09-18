@@ -149,6 +149,61 @@ Runnable copies of the Python and Node.js examples above (calling the Actor by i
 
 `domains` is the only required field - every other property falls back to a sensible default (all 18 tracked bots, both extra signals on, `onlyNew: true`).
 
+## Use this from Claude Desktop, Cursor, or Windsurf (via MCP)
+
+This Actor is also reachable as an MCP server through Apify's own hosted `@apify/actors-mcp-server`, scoped to just this Actor via a `?tools=` query string - not the full Delta Registry fleet.
+
+**Claude Desktop** (via the `mcp-remote` stdio bridge):
+
+```json
+{
+  "mcpServers": {
+    "delta-registry-ai-crawler-content-signal-permission-monitor": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.apify.com/?tools=stefano_seggio/ai-crawler-content-signal-permission-monitor",
+        "--header",
+        "Authorization: Bearer ${APIFY_TOKEN}"
+      ]
+    }
+  }
+}
+```
+
+**Cursor** (native HTTP transport):
+
+```json
+{
+  "mcpServers": {
+    "delta-registry-ai-crawler-content-signal-permission-monitor": {
+      "url": "https://mcp.apify.com/?tools=stefano_seggio/ai-crawler-content-signal-permission-monitor",
+      "headers": {
+        "Authorization": "Bearer ${APIFY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+**Windsurf** (uses `serverUrl`, not `url`):
+
+```json
+{
+  "mcpServers": {
+    "delta-registry-ai-crawler-content-signal-permission-monitor": {
+      "serverUrl": "https://mcp.apify.com/?tools=stefano_seggio/ai-crawler-content-signal-permission-monitor",
+      "headers": {
+        "Authorization": "Bearer ${env:APIFY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Replace `${APIFY_TOKEN}` with a real token from [Apify Console → Settings → Integrations](https://console.apify.com/settings/integrations). Note that `mcp-remote` does not expand shell environment variables inside the JSON string itself - paste the literal token and keep this file out of version control; Windsurf's `${env:APIFY_TOKEN}` genuinely does resolve from your environment. For the full 28-actor Delta Registry MCP configuration across all three clients, see [MCP_INTEGRATION.md](https://github.com/stefanoseggio/delta-registry-website/blob/main/MCP_INTEGRATION.md).
+
 ## Input & Output Schema
 
 This is a documentation/integration wrapper repo with no local `.actor/input_schema.json` - the field list below is the real, complete input surface as documented and exercised in this README's own examples above.
@@ -162,8 +217,12 @@ This is a documentation/integration wrapper repo with no local `.actor/input_sch
 | `checkContentSignals` | No | `true` | Extracts and tracks the `search`/`ai-input`/`ai-train` categories from a `Content-Signal:` line in `robots.txt` (IETF draft `draft-romm-aipref-contentsignals`). |
 | `checkLlmsTxt` | No | `true` | Fetches `/llms.txt` and `/llms-full.txt` and reports an added, removed, or edited file as a `CHANGED` event, keyed on a SHA-256 content hash. |
 | `onlyNew` | No | `true` | Suppresses the free `NO_CHANGE` row on repeat runs so your dataset only fills with actual deltas. |
-| `deltaStateName` | No | - | Namespaces baselines per schedule (e.g. `own-sites` vs. `competitor-watchlist`) so they never cross-contaminate. |
-| `maxDomainsPerRun`, `concurrency`, `requestTimeoutSecs`, `maxRetries` | No | - | Bound cost and wall-clock time on a large watchlist; retries use exponential backoff with jitter, capped at 15s. |
+| `deltaStateName` | No | `"default"` | Namespaces baselines per schedule (e.g. `own-sites` vs. `competitor-watchlist`) so they never cross-contaminate. |
+| `resetState` | No | `false` | Wipes all remembered state for this `deltaStateName` before the run, so every domain re-baselines from scratch as a free `BASELINE_SNAPSHOT`. |
+| `maxDomainsPerRun` | No | `200` | Hard cap on how many domains from the list are checked (and charged) in a single run; the rest are simply checked next run. |
+| `concurrency` | No | `15` | Max simultaneous in-flight HTTP requests across the whole run (each domain fans out to up to 3 fetches). |
+| `requestTimeoutSecs` | No | `15` | Per-request timeout; aborts one slow/unresponsive fetch without stalling the whole run. |
+| `maxRetries` | No | `4` | Retry attempts on 429/5xx/timeout, exponential backoff with jitter capped at 15s. |
 
 ### Output
 
@@ -204,6 +263,11 @@ One row per domain per delta event, most recent first, following the `overview` 
 | `source_url` | The exact `robots.txt` (or `llms.txt`) URL fetched for this record. |
 | `domain` | The watched hostname. |
 | `changed_permissions` | Array of `{ bot, previous_directive, new_directive }` objects - one entry per AI-crawler token whose directive flipped this run. Present on `ALLOWED`/`DISALLOWED` events. |
+| `bot_permissions` | Object with one entry per tracked bot token: the matched directive (`allow`, `disallow`, or `not_specified`), the matched path pattern, and which mechanism produced the match. |
+| `content_signals` | Cloudflare Content-Signal category values (`search`, `ai_input`, `ai_train`), each `yes`, `no`, or `null` if absent; all `null` when `checkContentSignals` is off. |
+| `llms_txt` / `llms_full_txt` | Presence, URL, SHA-256 content hash, and byte size of `/llms.txt` and `/llms-full.txt` at fetch time; `present: false` and other fields `null` if absent or `checkLlmsTxt` is off. |
+| `changed_content_signals` | Present only on `CHANGED` events caused by a Content-Signal flip - one entry per category with its previous and new value. |
+| `llms_txt_change` | Present only on a `CHANGED` event caused by an `llms.txt`/`llms-full.txt` presence or content change - previous/new presence and previous/new content hash; `null` otherwise. |
 | `status_fingerprint` | SHA-256 hash over the domain's bot-directive state, compared run-over-run to detect `ALLOWED`/`DISALLOWED`. |
 | `content_fingerprint` | SHA-256 hash over Content-Signal + llms.txt state, compared run-over-run to detect `CHANGED`. |
 
